@@ -35,3 +35,6 @@ spec = do
       it "can write an array" $ do
         let result = runConduitPure (yieldMany [Array [Integer 1, Integer 2]] .| respWrite .| sinkList)
         mconcat result `shouldBe` "*2\r\n:1\r\n:2\r\n\r\n"
+      it "can write a null string" $ do
+        let result = runConduitPure (yieldMany [NullString] .| respWrite .| sinkList)
+        mconcat result `shouldBe` "$-1\r\n"

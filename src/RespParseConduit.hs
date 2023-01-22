@@ -36,6 +36,8 @@ respWrite = awaitForever $ \r -> do
       yield . intToByteString $ length a
       yield "\r\n"
       yieldMany a .| respWrite
+    NullString -> do
+      yield "$-1"
   yield "\r\n"
   where 
     intToByteString =  BS.pack . go []

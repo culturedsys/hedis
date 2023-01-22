@@ -7,4 +7,5 @@ data Resp = SimpleString ByteString
   | Integer Int
   | BulkString ByteString
   | Array [Resp]
+  | NullString
   deriving (Show, Eq)
