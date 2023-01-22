@@ -24,6 +24,10 @@ source-repository head
 
 library
   exposed-modules:
+      AppState
+      Command
+      CommandParser
+      CommandProcessor
       Resp
       RespParseConduit
       RespParser
@@ -38,6 +42,8 @@ library
     , bytestring
     , conduit
     , conduit-extra
+    , containers
+    , stm
     , word8
   default-language: Haskell2010
 
@@ -54,7 +60,9 @@ executable hedis-exe
     , bytestring
     , conduit
     , conduit-extra
+    , containers
     , hedis
+    , stm
     , word8
   default-language: Haskell2010
 
@@ -62,6 +70,8 @@ test-suite hedis-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      CommandParserSpec
+      CommandProcessorSpec
       RespParserConduitSpec
       RespParserSpec
       Paths_hedis
@@ -74,7 +84,9 @@ test-suite hedis-test
     , bytestring
     , conduit
     , conduit-extra
+    , containers
     , hedis
     , hspec
+    , stm
     , word8
   default-language: Haskell2010

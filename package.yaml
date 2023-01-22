@@ -25,6 +25,8 @@ dependencies:
   - bytestring
   - attoparsec
   - word8
+  - stm
+  - containers
 
 ghc-options:
   - -Wall
