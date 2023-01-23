@@ -1,12 +1,11 @@
 module AppState(AppState(..), newState) where
-import Data.ByteString (ByteString)
-import qualified Data.Map as M
 import Control.Concurrent.STM (STM, TVar, newTVar)
+import Store (Store, empty)
 
 
 data AppState = AppState {
-  store :: TVar (M.Map ByteString ByteString)
+  store :: TVar Store
 }
 
 newState :: STM AppState
-newState = AppState <$> newTVar M.empty
+newState = AppState <$> newTVar Store.empty

@@ -31,6 +31,7 @@ library
       Resp
       RespParseConduit
       RespParser
+      Store
   other-modules:
       Paths_hedis
   hs-source-dirs:
@@ -74,6 +75,7 @@ test-suite hedis-test
       CommandProcessorSpec
       RespParserConduitSpec
       RespParserSpec
+      StoreSpec
       Paths_hedis
   hs-source-dirs:
       test
