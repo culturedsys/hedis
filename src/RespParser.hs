@@ -6,7 +6,8 @@ import Data.Word8
 import Resp
 import Control.Applicative ((<|>), optional)
 import Data.ByteString (ByteString)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
+import BsUtil (word8ArrayToInt)
 
 crlf :: Parser ByteString
 crlf = string "\r\n"
@@ -18,8 +19,8 @@ number :: Parser Int
 number = do
   sign <- optional (word8 _hyphen)
   let m = if isJust sign then -1 else 1
-  (m *) . word8ArrayToInt <$> many1 (satisfy isDigit)
-  where word8ArrayToInt = foldl (\acc v -> acc * 10 + fromIntegral (v - _0)) 0
+  (m *) . fromJust . word8ArrayToInt <$> many1 (satisfy isDigit)
+
 
 parser :: Parser Resp
 parser = 

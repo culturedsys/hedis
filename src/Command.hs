@@ -1,8 +1,14 @@
-module Command(Command(..), CommandError(..)) where
-import Data.ByteString
+{-# LANGUAGE DuplicateRecordFields #-}
+module Command(Command(..), CommandError(..), SetArgs(..), GetArgs(..), IncrArgs(..)) where
+import Data.ByteString ( ByteString )
 
-data Command = Set { cKey :: ByteString, csValue :: ByteString }
-  | Get { cKey :: ByteString }
+data SetArgs = SetArgs { cKey :: ByteString, csValue :: ByteString } deriving (Show, Eq)
+newtype GetArgs = GetArgs { cKey :: ByteString } deriving (Show, Eq)
+newtype IncrArgs = IncrArgs { cKey :: ByteString } deriving (Show, Eq)  
+
+data Command = Set SetArgs
+  | Get GetArgs
+  | Incr IncrArgs
   deriving (Show, Eq)
 
 
