@@ -26,6 +26,13 @@ handleCommand (AppState { store = store }) (Get (GetArgs k)) = handle store (\s 
     Right (maybe NullString BulkString v, s')
   )
 
+handleCommand (AppState { store = store }) (SetNx (SetArgs k v)) = handle store (\s -> do
+    (result, s') <- Store.setNoOverwrite s k v
+    case result of
+      Store.Modified -> Right (SimpleString "OK", s')
+      Store.Unmodified -> Right (NullString, s')
+  )
+
 handleCommand (AppState { store = store }) (Incr (IncrArgs k)) = handle store (\s -> do
     (result, s') <- Store.incr s k
     Right (Integer result, s')

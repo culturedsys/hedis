@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module StoreSpec (spec) where
 import Test.Hspec (Spec, describe, it, shouldBe, expectationFailure, Expectation)
-import Store (empty, set, get, incr)
+import Store (empty, set, get, incr, setNoOverwrite, SetResult(..))
 
 spec :: Spec
 spec = do
@@ -12,6 +12,14 @@ spec = do
       expectRight setResult
       let Right (_, store') = setResult
       fst <$> get store' "key" `shouldBe` Right (Just "value")
+
+    it "can setNoOverwrite if not present" $ do
+      let store = empty
+      fst <$> setNoOverwrite store "key" "value" `shouldBe` Right Modified
+
+    it "cannot setNoOverwrite if present" $ do
+      let Right (_, store) = set empty "key" "value"
+      fst <$> setNoOverwrite store "key" "replacement" `shouldBe` Right Unmodified
 
     it "can incr an integer" $ do
       let Right (_, store) = set empty "key" "1"

@@ -1,4 +1,4 @@
-module Store (Store(..), Error(..), Result, empty, set, get, incr) where
+module Store (Store(..), Error(..), Result, SetResult(..), empty, set, get, setNoOverwrite, incr) where
 
 import Data.ByteString (ByteString)
 import qualified Data.Map as M
@@ -21,6 +21,8 @@ data Error = BadType
 type Result a = Either Error (a, Store)
 
 newtype Store = Store (M.Map Key Entry)
+
+data SetResult = Modified | Unmodified deriving (Eq, Show)
 
 empty :: Store
 empty = Store M.empty
@@ -53,6 +55,12 @@ set s k v = Right ((), insertString k v s)
 
 get :: Store -> ByteString -> Result (Maybe ByteString)
 get s k = lookupString k s
+
+setNoOverwrite :: Store -> ByteString -> ByteString -> Result SetResult
+setNoOverwrite s k v = case lookupString k s of
+  Left e -> Left e
+  Right (Just _, s') -> Right (Unmodified, s')
+  Right (Nothing, s') -> Right (Modified, insertString k v s')
 
 incr :: Store -> ByteString -> Result Int
 incr s k =

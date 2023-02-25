@@ -8,6 +8,7 @@ newtype IncrArgs = IncrArgs { cKey :: ByteString } deriving (Show, Eq)
 
 data Command = Set SetArgs
   | Get GetArgs
+  | SetNx SetArgs
   | Incr IncrArgs
   deriving (Show, Eq)
 

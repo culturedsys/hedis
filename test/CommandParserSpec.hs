@@ -16,3 +16,7 @@ spec = do
     it "can parse an incr command" $ do
       parse (Array [BulkString "INCR", BulkString "key"]) `shouldBe`
         Right (Incr $ IncrArgs "key")
+
+    it "can parse a setnx command" $ do
+      parse (Array [BulkString "SETNX", BulkString "key", BulkString "value"]) `shouldBe`
+        Right (SetNx $ SetArgs "key" "value")

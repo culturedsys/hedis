@@ -18,3 +18,8 @@ spec = do
     it "should handle an incr command" $ do
       appState <- atomically newState
       atomically (handleCommand appState (Incr $ IncrArgs "key")) `shouldReturn` Integer 1
+
+    it "should handle a setnx command" $ do
+      appState <- atomically newState
+      atomically (handleCommand appState (SetNx $ SetArgs "key" "value")) `shouldReturn` SimpleString "OK"
+      atomically (handleCommand appState (SetNx $ SetArgs "key" "value")) `shouldReturn` NullString
