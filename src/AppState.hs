@@ -3,9 +3,9 @@ import Control.Concurrent.STM (STM, TVar, newTVar)
 import Store (Store, empty)
 
 
-data AppState = AppState {
+newtype AppState = AppState {
   store :: TVar Store
 }
 
 newState :: STM AppState
-newState = AppState <$> newTVar Store.empty
+newState = AppState <$> newTVar Store.empty 

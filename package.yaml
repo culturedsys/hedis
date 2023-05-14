@@ -27,6 +27,7 @@ dependencies:
   - word8
   - stm
   - containers
+  - time
 
 ghc-options:
   - -Wall
