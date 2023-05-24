@@ -45,6 +45,7 @@ library
     , conduit
     , conduit-extra
     , containers
+    , mtl
     , stm
     , time
     , word8
@@ -65,6 +66,7 @@ executable hedis-exe
     , conduit-extra
     , containers
     , hedis
+    , mtl
     , stm
     , time
     , word8
@@ -92,6 +94,7 @@ test-suite hedis-test
     , containers
     , hedis
     , hspec
+    , mtl
     , stm
     , time
     , word8

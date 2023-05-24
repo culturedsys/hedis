@@ -28,6 +28,7 @@ dependencies:
   - stm
   - containers
   - time
+  - mtl
 
 ghc-options:
   - -Wall

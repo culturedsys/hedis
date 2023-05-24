@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module StoreSpec (spec) where
-import Test.Hspec (Spec, describe, it, shouldBe, expectationFailure, Expectation)
-import Store (empty, set, get, incr, setNoOverwrite, SetResult(..), setWithExpiration)
+import Test.Hspec (Spec, describe, it, shouldBe)
+import Store (empty, set, get, incr, setNoOverwrite, SetResult(..), setWithExpiration, runStoreM)
 import Data.Time (UTCTime(UTCTime), fromGregorian, addUTCTime, secondsToNominalDiffTime)
 
 spec :: Spec
@@ -10,40 +10,38 @@ spec = do
   describe "Store.Store" $ do
     it "can set and get" $ do
       let store = empty
-      let setResult = set store "key" "value" now
-      expectRight setResult
-      let Right (_, store') = setResult
-      fst <$> get store' "key" now `shouldBe` Right (Just "value")
+      let (result, _) = runStoreM store now $ do
+            set "key" "value"
+            get "key"
+      result `shouldBe` Right (Just "value")
 
     it "can setNoOverwrite if not present" $ do
       let store = empty
-      fst <$> setNoOverwrite store "key" "value" now `shouldBe` Right Modified
+      let (result, _) = runStoreM store now (setNoOverwrite "key" "value")
+      result `shouldBe` Right Modified
 
     it "cannot setNoOverwrite if present" $ do
-      let Right (_, store) = set empty "key" "value" now
-      fst <$> setNoOverwrite store "key" "replacement" now `shouldBe` Right Unmodified
+      let (result, _) = runStoreM empty now $ do
+            set "key" "value"
+            setNoOverwrite "key" "replacement"
+      result `shouldBe` Right Unmodified
 
     it "can get value setWithExpiry if not after expiry time" $ do
       let duration = secondsToNominalDiffTime 10
-      let Right (_, store') = setWithExpiration empty "key" "value" duration now
-      fst <$> get store' "key" (addUTCTime (secondsToNominalDiffTime 9) now) `shouldBe` Right (Just "value")
+      let (_, store) = runStoreM empty now (setWithExpiration "key" "value" duration)
+      let (result, _) = runStoreM store (addUTCTime (secondsToNominalDiffTime 9) now) (get "key")
+      result `shouldBe` Right (Just "value")
 
     it "can get nothing setWithExpiry if at expiry time" $ do
       let duration = secondsToNominalDiffTime 10
-      let Right (_, store') = setWithExpiration empty "key" "value" duration now
-      fst <$> get store' "key" (addUTCTime duration now) `shouldBe` Right Nothing
+      let (_, store) = runStoreM empty now (setWithExpiration "key" "value" duration)
+      let (result, _) = runStoreM store (addUTCTime duration now) (get "key")  
+      result `shouldBe` Right Nothing
 
     it "can incr an integer" $ do
-      let Right (_, store) = set empty "key" "1" now
-      let incrResult = incr store "key" now
-      expectRight incrResult
-      fst <$> incrResult `shouldBe` Right 2
-      let Right (_, store') = incrResult
-      fst <$> get store' "key" now `shouldBe` Right (Just "2")
-
-
-expectRight :: (Show a1) => Either a1 a2 -> Expectation
-expectRight actual =
-  case actual of
-    Left e -> expectationFailure ("Expected Right, got Left " ++ (show e))
-    Right _ -> return ()
+      let (result, store) = runStoreM empty now $ do 
+            set "key" "1"
+            incr "key"
+      result `shouldBe` Right 2
+      let (result', _) = runStoreM store now (get "key")
+      result' `shouldBe` Right (Just "2")

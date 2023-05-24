@@ -1,10 +1,15 @@
-module Store (Store(..), Error(..), Result, SetResult(..), empty, set, get, setNoOverwrite, incr, setWithExpiration) where
+{-# LANGUAGE LambdaCase #-}
+module Store (Store(..), StoreM, Error(..), Result, SetResult(..), empty, set, get, setNoOverwrite, incr, setWithExpiration, runStoreM) where
 
 import Data.ByteString (ByteString)
 import qualified Data.Map as M
 import BsUtil (byteStringToInt, intToByteString)
 import Data.Maybe (fromMaybe)
 import Data.Time(UTCTime, NominalDiffTime, addUTCTime)
+import qualified Control.Monad.State as State
+import Control.Monad.Reader
+    ( ReaderT, MonadReader(ask), runReaderT )
+import Control.Monad.State (runState)
 
 
 type Key = ByteString
@@ -20,73 +25,116 @@ data Entry = Entry {
 data Error = BadType
   deriving (Eq, Show)
 
-type Result a = Either Error (a, Store)
+type Result a = Either Error a
 
 newtype Store = Store (M.Map Key Entry)
 
+type StoreM = ReaderT UTCTime (State.State Store)
+
 data SetResult = Modified | Unmodified deriving (Eq, Show)
 
-data ExpiryChange = SetExpiry UTCTime | ClearExpiry | KeepExpiry
+data ExpiryChange = SetExpiry NominalDiffTime | ClearExpiry | KeepExpiry
+
+
+runStoreM :: Store -> UTCTime -> StoreM (Result a) -> (Result a, Store)
+runStoreM store now m = runState (runReaderT m now) store
+
 
 empty :: Store
 empty = Store M.empty
 
-lookupValue :: Key -> Store -> UTCTime -> Maybe Value
-lookupValue k (Store m) now = do
-  e <- M.lookup k m
-  case expiry e of
-    Nothing -> Just (value e)
-    Just expiryTime -> if now < expiryTime then Just (value e) else Nothing
 
-lookupString :: Key -> Store -> UTCTime -> Result (Maybe ByteString)
-lookupString k store now = case lookupValue k store now of
-  Nothing -> Right (Nothing, store)
-  Just (IntValue i) -> Right  (Just $ intToByteString i, store)
-  Just (StringValue s) -> Right (Just s, store)
+lookupValue :: Key -> StoreM (Maybe Value)
+lookupValue k = do
+  (Store m) <- State.get
+  now <- ask
+  case M.lookup k m of
+    Nothing -> return Nothing
+    Just e -> case expiry e of
+      Nothing -> return $ Just (value e)
+      Just expiryTime -> if now < expiryTime then
+          return $ Just (value e)
+        else do
+          State.put $ Store (M.delete k m)
+          return Nothing
 
-lookupInt :: Key -> Store -> UTCTime -> Result (Maybe Int)
-lookupInt k store now = case lookupValue k store now of
-  Nothing -> Right (Nothing, store)
-  Just v -> case v of
-    (IntValue i) -> Right (Just i, store)
-    (StringValue s) -> case byteStringToInt s of
+
+lookupType :: Key -> (Value -> Result a) -> StoreM (Result (Maybe a))
+lookupType k converter = do
+  value <- lookupValue k
+  return $ case value of
+    Nothing -> Right Nothing
+    Just v -> Just <$> converter v
+
+
+lookupString :: Key -> StoreM (Result (Maybe ByteString))
+lookupString k = lookupType k $ \case
+  IntValue i ->  Right $ intToByteString i
+  StringValue s -> Right s
+
+
+lookupInt :: Key -> StoreM (Result (Maybe Int))
+lookupInt k = lookupType k $ \case
+  IntValue i -> Right i
+  StringValue s -> case byteStringToInt s of
       Nothing -> Left BadType
-      Just i -> Right (Just i, store)
+      Just i -> Right i
 
-insertValue :: Key -> Value -> ExpiryChange -> Store -> Store
-insertValue k v expiry (Store m) = Store $ M.alter (\ maybePrev -> Just $ case (maybePrev, expiry) of
-    (Nothing, SetExpiry e) -> Entry { value = v, expiry = Just e}
-    (Nothing, _) -> Entry { value = v, expiry = Nothing }
-    (Just _, SetExpiry e) -> Entry { value = v, expiry = Just e}
-    (Just _, ClearExpiry) -> Entry { value = v, expiry = Nothing}
-    (Just prev, KeepExpiry) -> prev { value = v }
-  ) k m
 
-insertString :: Key -> ByteString -> ExpiryChange -> Store -> Store
+insertValue :: Key -> Value -> ExpiryChange -> StoreM ()
+insertValue k v expiryChange = do
+  (Store m) <- State.get
+  now <- ask
+  let m' = M.alter (\ maybePrev -> Just $ case (expiryChange, maybePrev) of
+        (KeepExpiry, Just prev) -> prev { value = v }
+        (SetExpiry e, _) -> Entry { value = v, expiry = Just (addUTCTime e now) }
+        (ClearExpiry, Just _) -> Entry { value = v, expiry = Nothing}
+        (_, Nothing) -> Entry { value = v, expiry = Nothing }
+        ) k m
+  State.put (Store m')
+
+
+insertString :: Key -> ByteString -> ExpiryChange -> StoreM ()
 insertString k v = insertValue k (StringValue v)
 
-insertInt :: Key -> Int -> ExpiryChange -> Store -> Store
+
+insertInt :: Key -> Int -> ExpiryChange -> StoreM ()
 insertInt k v = insertValue k (IntValue v)
 
-set :: Store -> ByteString -> ByteString -> UTCTime -> Result ()
-set s k v _ = Right ((), insertString k v ClearExpiry s)
 
-get :: Store -> ByteString -> UTCTime -> Result (Maybe ByteString)
-get s k = lookupString k s
+set :: ByteString -> ByteString -> StoreM (Result ())
+set k v = do
+  insertString k v ClearExpiry
+  return $ Right ()
 
-setNoOverwrite :: Store -> ByteString -> ByteString -> UTCTime -> Result SetResult
-setNoOverwrite s k v now = case lookupString k s now of
-  Left e -> Left e
-  Right (Just _, s') -> Right (Unmodified, s')
-  Right (Nothing, s') -> Right (Modified, insertString k v ClearExpiry s')
 
-setWithExpiration :: Store -> ByteString -> ByteString -> NominalDiffTime -> UTCTime -> Result ()
-setWithExpiration s k v d now = Right ((), insertString k v (SetExpiry (addUTCTime d now)) s)
+get :: ByteString -> StoreM (Result (Maybe ByteString))
+get = lookupString
 
-incr :: Store -> ByteString -> UTCTime -> Result Int
-incr s k now =
-  case lookupInt k s now of
-    Left e -> Left e
-    Right (value, store) ->
-      let res = (fromMaybe 0 value) + 1 in
-        Right (res, insertInt k res KeepExpiry store)
+
+setNoOverwrite :: ByteString -> ByteString -> StoreM (Result SetResult)
+setNoOverwrite k v = do
+  existing <- lookupString k
+  case existing of
+    Left e -> return $ Left e
+    Right (Just _) -> return $ Right Unmodified
+    Right Nothing -> do
+      insertString k v ClearExpiry
+      return $ Right Modified
+
+
+setWithExpiration :: ByteString -> ByteString -> NominalDiffTime -> StoreM (Result ())
+setWithExpiration k v d = do
+  insertString k v (SetExpiry d)
+  return $ Right ()
+
+
+incr :: ByteString -> StoreM (Result Int)
+incr k = do
+  existing <- lookupInt k
+  case existing of
+    Left e -> return $ Left e
+    Right value ->
+      let res = (fromMaybe 0 value) + 1 in do
+        insertInt k res KeepExpiry
+        return $ Right res
