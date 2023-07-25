@@ -1,8 +1,9 @@
-module Resp(Resp(..)) where
+module Resp (Resp (..)) where
 
 import Data.ByteString (ByteString)
 
-data Resp = SimpleString ByteString
+data Resp
+  = SimpleString ByteString
   | Error ByteString
   | Integer Int
   | BulkString ByteString

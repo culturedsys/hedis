@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-module RespParserSpec (spec) where
-import Test.Hspec (Spec, describe, shouldBe, it)
-import RespParser (parser)
-import Data.Attoparsec.ByteString (parseOnly)
-import Resp (Resp(..))
 
-spec :: Spec 
+module RespParserSpec (spec) where
+
+import Data.Attoparsec.ByteString (parseOnly)
+import Resp (Resp (..))
+import RespParser (parser)
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+spec :: Spec
 spec = do
   describe "RespParser.parse" $ do
     it "can parse a simple string" $ do
@@ -19,7 +21,7 @@ spec = do
     it "can parse an array" $ do
       parseOnly parser "*3\r\n:1\r\n:2\r\n:3\r\n" `shouldBe` Right (Array [Integer 1, Integer 2, Integer 3])
     it "can parse a nested array" $ do
-      parseOnly parser "*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n" `shouldBe`
-        Right (Array [Array [Integer 1, Integer 2, Integer 3], Array [SimpleString "Hello", Error "World"]])
+      parseOnly parser "*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Hello\r\n-World\r\n"
+        `shouldBe` Right (Array [Array [Integer 1, Integer 2, Integer 3], Array [SimpleString "Hello", Error "World"]])
     it "can parse a null string" $ do
       parseOnly parser "$-1\r\n" `shouldBe` Right NullString

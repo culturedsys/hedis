@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module StoreSpec (spec) where
+
+import Data.Time (UTCTime (UTCTime), addUTCTime, fromGregorian, secondsToNominalDiffTime)
+import Store (SetResult (..), empty, get, incr, runStoreM, set, setNoOverwrite, setWithExpiration)
 import Test.Hspec (Spec, describe, it, shouldBe)
-import Store (empty, set, get, incr, setNoOverwrite, SetResult(..), setWithExpiration, runStoreM)
-import Data.Time (UTCTime(UTCTime), fromGregorian, addUTCTime, secondsToNominalDiffTime)
 
 spec :: Spec
 spec = do
@@ -35,11 +37,11 @@ spec = do
     it "can get nothing setWithExpiry if at expiry time" $ do
       let duration = secondsToNominalDiffTime 10
       let (_, store) = runStoreM empty now (setWithExpiration "key" "value" duration)
-      let (result, _) = runStoreM store (addUTCTime duration now) (get "key")  
+      let (result, _) = runStoreM store (addUTCTime duration now) (get "key")
       result `shouldBe` Right Nothing
 
     it "can incr an integer" $ do
-      let (result, store) = runStoreM empty now $ do 
+      let (result, store) = runStoreM empty now $ do
             set "key" "1"
             incr "key"
       result `shouldBe` Right 2

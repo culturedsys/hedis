@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
-module CommandProcessorSpec(spec) where
-import Test.Hspec (Spec, describe, it, shouldReturn)
+
+module CommandProcessorSpec (spec) where
+
+import Command (Command (..), DecrArgs (..), GetArgs (..), IncrArgs (..), SetArgs (..))
 import CommandProcessor (handleCommand)
-import Command (Command(..), SetArgs(..), GetArgs(..), IncrArgs(..), DecrArgs(..))
 import Control.Concurrent.STM (atomically, newTVarIO)
-import Resp (Resp(..))
-import Data.Time (fromGregorian, UTCTime (UTCTime))
-import qualified Store
+import Data.Time (UTCTime (UTCTime), fromGregorian)
+import Resp (Resp (..))
+import Store qualified
+import Test.Hspec (Spec, describe, it, shouldReturn)
 
 spec :: Spec
 spec = do
