@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Store (Store(..), StoreM, Error(..), Result, SetResult(..), empty, set, get, setNoOverwrite, incr, setWithExpiration, runStoreM) where
+module Store (Store(..), StoreM, Error(..), Result, SetResult(..), empty, set, get, setNoOverwrite, incr, setWithExpiration, runStoreM, decr) where
 
 import Data.ByteString (ByteString)
 import qualified Data.Map as M
@@ -136,5 +136,15 @@ incr k = do
     Left e -> return $ Left e
     Right value ->
       let res = (fromMaybe 0 value) + 1 in do
+        insertInt k res KeepExpiry
+        return $ Right res
+
+decr :: ByteString -> StoreM (Result Int)
+decr k = do
+  existing <- lookupInt k
+  case existing of
+    Left e -> return $ Left e
+    Right value ->
+      let res = (fromMaybe 0 value) - 1 in do
         insertInt k res KeepExpiry
         return $ Right res

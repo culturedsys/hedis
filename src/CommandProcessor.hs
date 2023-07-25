@@ -4,7 +4,7 @@ module CommandProcessor (processCommand, handleCommand) where
 import Resp(Resp(..))
 import Data.Conduit.Attoparsec (ParseError)
 import Control.Concurrent.STM (STM, atomically, readTVar, writeTVar, TVar)
-import Command (Command (..), SetArgs (SetArgs), SetExArgs (SetExArgs), GetArgs (GetArgs), IncrArgs (IncrArgs), CommandError (CommandParseError, ArgParseError))
+import Command (Command (..), SetArgs (SetArgs), SetExArgs (SetExArgs), GetArgs (GetArgs), IncrArgs (IncrArgs), DecrArgs (DecrArgs), CommandError (CommandParseError, ArgParseError))
 import CommandParser (parse)
 import AppState(AppState (..))
 import qualified Store
@@ -38,6 +38,8 @@ handleCommand (SetEx (SetExArgs k d v)) =
   handle (Store.setWithExpiration k v d) (const (SimpleString "OK"))
 
 handleCommand (Incr (IncrArgs k)) = handle (Store.incr k) Integer
+
+handleCommand (Decr (DecrArgs k)) = handle (Store.decr k) Integer
 
 
 handle ::  Store.StoreM (Store.Result a) -> (a -> Resp) -> UTCTime -> TVar Store.Store -> STM Resp

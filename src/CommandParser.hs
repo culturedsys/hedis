@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module CommandParser(parse) where
 import Resp(Resp(..))
-import Command(Command(..), CommandError(..), SetArgs(..), GetArgs(..), IncrArgs(..), SetExArgs (SetExArgs))
+import Command(Command(..), CommandError(..), SetArgs(..), GetArgs(..), IncrArgs(..), SetExArgs (SetExArgs), DecrArgs (DecrArgs))
 import BsUtil (byteStringToInt)
 import Data.Time (secondsToNominalDiffTime)
 
@@ -15,4 +15,5 @@ parse (Array [BulkString "SETEX", BulkString k, BulkString d, BulkString v]) = c
     Just i -> let duration = secondsToNominalDiffTime $ fromIntegral i in
       Right . SetEx $ SetExArgs k duration v
 parse (Array [BulkString "INCR", BulkString k]) = Right . Incr $ IncrArgs k
+parse (Array [BulkString "DECR", BulkString k]) = Right . Decr $ DecrArgs k
 parse _ = Left CommandParseError
