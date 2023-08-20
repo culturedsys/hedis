@@ -64,10 +64,9 @@ lookupValue k = do
     Nothing -> return Nothing
     Just e -> case expiry e of
       Nothing -> return $ Just (value e)
-      Just expiryTime ->
-        if now < expiryTime
-          then return $ Just (value e)
-          else do
+      Just expiryTime 
+        | now < expiryTime -> return $ Just (value e)
+        | otherwise -> do
             State.put $ Store (M.delete k m)
             return Nothing
 
@@ -99,7 +98,7 @@ insertValue k v expiryChange = do
           ( \maybePrev -> Just $ case (expiryChange, maybePrev) of
               (KeepExpiry, Just prev) -> prev {value = v}
               (SetExpiry e, _) -> Entry {value = v, expiry = Just (addUTCTime e now)}
-              (ClearExpiry, Just _) -> Entry {value = v, expiry = Nothing}
+              (ClearExpiry, _) -> Entry {value = v, expiry = Nothing}
               (_, Nothing) -> Entry {value = v, expiry = Nothing}
           )
           k

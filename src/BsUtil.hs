@@ -3,27 +3,11 @@ module BsUtil (intToByteString, word8ArrayToInt, byteStringToInt) where
 import Control.Monad (foldM)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as C8 (pack)
 import Data.Word8
 
 intToByteString :: Int -> ByteString
-intToByteString = BS.pack . go []
-  where
-    go acc n =
-      let r = n `mod` 10
-          rest = n `div` 10
-          c = case r of
-            0 -> _0
-            1 -> _1
-            2 -> _2
-            3 -> _3
-            4 -> _4
-            5 -> _5
-            6 -> _6
-            7 -> _7
-            8 -> _8
-            9 -> _9
-            _ -> error " x `mod` 10 is somehow > 10"
-       in if n < 10 then c : acc else go (c : acc) rest
+intToByteString = C8.pack . show
 
 word8ArrayToInt :: [Word8] -> Maybe Int
 word8ArrayToInt =
