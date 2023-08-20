@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -15,30 +16,61 @@ crlf :: Parser ByteString
 crlf = string "\r\n"
 
 crlfTerminated :: Parser ByteString
-crlfTerminated = takeTill (== _cr) <* crlf
+crlfTerminated = takeTill (== _cr)
 
-number :: Parser Int
-number = do
+magnitudeParser :: Parser Int
+magnitudeParser = fromJust . word8ArrayToInt <$> many1 (satisfy isDigit)
+
+numberParser :: Parser Int
+numberParser = do
   sign <- optional (word8 _hyphen)
-  let m = if isJust sign then -1 else 1
-  (m *) . fromJust . word8ArrayToInt <$> many1 (satisfy isDigit)
+  magnitude <- magnitudeParser
+  return $ if isJust sign then -magnitude else magnitude
+
+valueParser :: (a -> Resp) -> Word8 -> Parser a -> Parser Resp
+valueParser wrap sigil p = wrap <$> (word8 sigil *> p)
+
+simpleStringParser :: Parser Resp
+simpleStringParser = valueParser SimpleString _plus crlfTerminated <* crlf
+
+errorParser :: Parser Resp
+errorParser = valueParser Error _hyphen crlfTerminated <* crlf
+
+integerParser :: Parser Resp
+integerParser = valueParser Integer _colon numberParser <* crlf
+
+bulkStringParser :: Parser Resp
+bulkStringParser =
+  valueParser
+    BulkString
+    _dollar
+    ( do
+        len <- magnitudeParser <* crlf
+        P.take len
+    )
+
+nullStringParser :: Parser Resp
+nullStringParser =
+  valueParser
+    (const NullString)
+    _dollar
+    (word8 _hyphen >> word8 _1 >> crlf)
+
+arrayParser :: Parser Resp
+arrayParser =
+  valueParser
+    Array
+    _asterisk
+    ( do
+        len <- numberParser <* crlf
+        count len parser
+    )
 
 parser :: Parser Resp
 parser =
-  (word8 _plus *> (SimpleString <$> crlfTerminated))
-    <|> (word8 _hyphen *> (Error <$> crlfTerminated))
-    <|> (word8 _colon *> (Integer <$> number <* crlf))
-    <|> ( word8 _dollar
-            *> ( do
-                   len <- number <* crlf
-                   if len == -1
-                     then return NullString
-                     else BulkString <$> P.take len <* crlf
-               )
-        )
-    <|> ( word8 _asterisk
-            *> ( Array <$> do
-                   len <- number <* crlf
-                   count len parser
-               )
-        )
+  simpleStringParser
+    <|> errorParser
+    <|> integerParser
+    <|> bulkStringParser
+    <|> nullStringParser
+    <|> arrayParser
