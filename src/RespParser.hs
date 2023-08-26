@@ -1,8 +1,7 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module RespParser (parser) where
+module RespParser (respParser) where
 
 import BsUtil (word8ArrayToInt)
 import Control.Applicative (optional, (<|>))
@@ -62,12 +61,12 @@ arrayParser =
     Array
     _asterisk
     ( do
-        len <- numberParser <* crlf
-        count len parser
+        len <- magnitudeParser <* crlf
+        count len respParser
     )
 
-parser :: Parser Resp
-parser =
+respParser :: Parser Resp
+respParser =
   simpleStringParser
     <|> errorParser
     <|> integerParser

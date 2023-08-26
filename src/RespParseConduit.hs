@@ -10,10 +10,10 @@ import Data.Conduit (ConduitT, awaitForever, yield, (.|))
 import Data.Conduit.Attoparsec (ParseError, conduitParserEither)
 import Data.Conduit.Combinators qualified as C
 import Resp (Resp (..))
-import RespParser (parser)
+import RespParser (respParser)
 
 respParse :: Monad m => ConduitT ByteString (Either ParseError Resp) m ()
-respParse = conduitParserEither parser .| C.map (fmap snd)
+respParse = conduitParserEither respParser .| C.map (fmap snd)
 
 respWrite :: Monad m => ConduitT Resp ByteString m ()
 respWrite = awaitForever $ \r -> do
