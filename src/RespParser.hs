@@ -45,7 +45,7 @@ bulkStringParser =
     _dollar
     ( do
         len <- magnitudeParser <* crlf
-        P.take len
+        P.take len <* crlf
     )
 
 nullStringParser :: Parser Resp
